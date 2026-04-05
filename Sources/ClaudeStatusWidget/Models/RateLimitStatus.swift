@@ -16,9 +16,9 @@ struct RateLimitStatusInfo {
 
     var color: Color {
         switch severity {
-        case .safe: return .green
-        case .moderate: return .yellow
-        case .danger: return .red
+        case .safe: return Color(red: 0.3, green: 0.8, blue: 0.4)
+        case .moderate: return Color(red: 0.9, green: 0.75, blue: 0.3)
+        case .danger: return Color(red: 0.85, green: 0.35, blue: 0.35)
         }
     }
 }

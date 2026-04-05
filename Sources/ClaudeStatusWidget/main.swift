@@ -30,7 +30,7 @@ class DropdownPanel: NSPanel {
 
         // NSVisualEffectView IS the content view — not a background layer
         let visualEffect = NSVisualEffectView()
-        visualEffect.material = .popover
+        visualEffect.material = .hudWindow
         visualEffect.blendingMode = .behindWindow
         visualEffect.state = .active
         visualEffect.wantsLayer = true

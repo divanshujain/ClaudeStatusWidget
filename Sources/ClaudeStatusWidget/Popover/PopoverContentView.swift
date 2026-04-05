@@ -17,8 +17,8 @@ struct PopoverContentView: View {
                 Spacer()
             }
             .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
 
             Divider()
 
@@ -68,7 +68,7 @@ struct PopoverContentView: View {
                 Spacer()
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
         }
         .frame(width: 290)
     }
