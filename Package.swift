@@ -15,8 +15,7 @@ let package = Package(
                               "-Xlinker", "Sources/ClaudeStatusWidget/Info.plist"])
             ]
         ),
-        // NOTE: XCTest is unavailable in Command Line Tools-only environment (no Xcode IDE).
-        // Test target is declared but disabled until Xcode is present or testing is restructured.
+        // Re-enable once Xcode is installed (XCTest requires Xcode IDE)
         // .testTarget(
         //     name: "ClaudeStatusWidgetTests",
         //     dependencies: ["ClaudeStatusWidget"],
