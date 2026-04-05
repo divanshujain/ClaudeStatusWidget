@@ -8,6 +8,9 @@ let package = Package(
         .executableTarget(
             name: "ClaudeStatusWidget",
             path: "Sources/ClaudeStatusWidget",
+            resources: [
+                .process("Resources")
+            ],
             linkerSettings: [
                 .unsafeFlags(["-Xlinker", "-sectcreate",
                               "-Xlinker", "__TEXT",

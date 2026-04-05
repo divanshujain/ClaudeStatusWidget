@@ -27,6 +27,33 @@ class SessionManagerGlobal: ObservableObject {
     }
 }
 
+func loadMenuBarIcon() -> NSImage? {
+    // Try Bundle.module first (SPM resource bundle), then main bundle
+    let bundles = [Bundle.module, Bundle.main]
+    for bundle in bundles {
+        if let url = bundle.url(forResource: "claudecode", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            image.isTemplate = true
+            image.size = NSSize(width: 18, height: 18)
+            return image
+        }
+        // Check inside nested resource bundles
+        if let resourceURL = bundle.resourceURL {
+            let nestedBundles = (try? FileManager.default.contentsOfDirectory(at: resourceURL, includingPropertiesForKeys: nil))?.filter { $0.pathExtension == "bundle" } ?? []
+            for nested in nestedBundles {
+                if let nestedBundle = Bundle(url: nested),
+                   let url = nestedBundle.url(forResource: "claudecode", withExtension: "png"),
+                   let image = NSImage(contentsOf: url) {
+                    image.isTemplate = true
+                    image.size = NSSize(width: 18, height: 18)
+                    return image
+                }
+            }
+        }
+    }
+    return nil
+}
+
 @main
 struct ClaudeStatusWidgetApp: App {
     @StateObject private var global = SessionManagerGlobal.shared.manager
@@ -36,16 +63,22 @@ struct ClaudeStatusWidgetApp: App {
             PopoverContentView(sessionManager: SessionManagerGlobal.shared.manager)
         } label: {
             let sessions = SessionManagerGlobal.shared.manager.sessions
-            if sessions.isEmpty {
-                Text("◆")
-            } else {
-                let first = sessions.first!
-                let pct = first.context.usedPercentage
-                let name = first.folderName
-                if let limits = SessionManagerGlobal.shared.manager.latestRateLimits {
-                    Text("\(name) \(pct)%  ·  5h: \(Int(limits.fiveHour.usedPercentage))%")
+            HStack(spacing: 4) {
+                if let img = loadMenuBarIcon() {
+                    Image(nsImage: img)
+                        .renderingMode(.template)
+                }
+                if sessions.isEmpty {
+                    Text("Claude")
                 } else {
-                    Text("\(name) \(pct)%")
+                    let first = sessions.first!
+                    let pct = first.context.usedPercentage
+                    let name = first.folderName
+                    if let limits = SessionManagerGlobal.shared.manager.latestRateLimits {
+                        Text("\(name) \(pct)%  ·  5h: \(Int(limits.fiveHour.usedPercentage))%")
+                    } else {
+                        Text("\(name) \(pct)%")
+                    }
                 }
             }
         }
