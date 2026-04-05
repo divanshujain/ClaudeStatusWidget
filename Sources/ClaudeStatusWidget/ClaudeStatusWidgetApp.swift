@@ -63,7 +63,7 @@ struct ClaudeStatusWidgetApp: App {
             PopoverContentView(sessionManager: SessionManagerGlobal.shared.manager)
         } label: {
             let sessions = SessionManagerGlobal.shared.manager.sessions
-            HStack(spacing: 4) {
+            HStack(spacing: 8) {
                 if let img = loadMenuBarIcon() {
                     Image(nsImage: img)
                         .renderingMode(.template)
