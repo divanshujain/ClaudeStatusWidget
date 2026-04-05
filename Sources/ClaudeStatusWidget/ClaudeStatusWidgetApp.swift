@@ -63,22 +63,20 @@ struct ClaudeStatusWidgetApp: App {
             PopoverContentView(sessionManager: SessionManagerGlobal.shared.manager)
         } label: {
             let sessions = SessionManagerGlobal.shared.manager.sessions
-            HStack(spacing: 8) {
-                if let img = loadMenuBarIcon() {
-                    Image(nsImage: img)
-                        .renderingMode(.template)
-                }
-                if sessions.isEmpty {
-                    Text("Claude")
+            if let img = loadMenuBarIcon() {
+                Image(nsImage: img)
+                    .renderingMode(.template)
+            }
+            if sessions.isEmpty {
+                Text("  Claude")
+            } else {
+                let first = sessions.first!
+                let pct = first.context.usedPercentage
+                let name = first.folderName
+                if let limits = SessionManagerGlobal.shared.manager.latestRateLimits {
+                    Text(" \(name) \(pct)%  ·  5h: \(Int(limits.fiveHour.usedPercentage))%")
                 } else {
-                    let first = sessions.first!
-                    let pct = first.context.usedPercentage
-                    let name = first.folderName
-                    if let limits = SessionManagerGlobal.shared.manager.latestRateLimits {
-                        Text("\(name) \(pct)%  ·  5h: \(Int(limits.fiveHour.usedPercentage))%")
-                    } else {
-                        Text("\(name) \(pct)%")
-                    }
+                    Text(" \(name) \(pct)%")
                 }
             }
         }
