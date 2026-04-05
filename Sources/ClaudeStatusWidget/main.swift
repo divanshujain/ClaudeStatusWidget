@@ -157,15 +157,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let buttonRect = button.convert(button.bounds, to: nil)
         let screenRect = buttonWindow.convertToScreen(buttonRect)
 
-        let sessionHeight = max(sessionManager.sessions.count * 60, 80)
-        let totalHeight = sessionHeight + 220
-        let panelHeight = CGFloat(min(totalHeight, 500))
+        // Let the content determine the height
         let panelWidth: CGFloat = 290
+        if let contentView = panel.contentView {
+            let fittingSize = contentView.fittingSize
+            let panelHeight = min(fittingSize.height, 500)
+            let x = screenRect.midX - panelWidth / 2
+            let y = screenRect.minY - panelHeight - 4
+            panel.setFrame(NSRect(x: x, y: y, width: panelWidth, height: panelHeight), display: true)
+        }
 
-        let x = screenRect.midX - panelWidth / 2
-        let y = screenRect.minY - panelHeight - 4
-
-        panel.setFrame(NSRect(x: x, y: y, width: panelWidth, height: panelHeight), display: true)
         panel.makeKeyAndOrderFront(nil)
 
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
