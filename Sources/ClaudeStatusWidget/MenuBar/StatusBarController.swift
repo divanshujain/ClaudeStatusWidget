@@ -40,7 +40,7 @@ class StatusBarController {
             pill.isDimmed = staleSessions.contains(session.sessionId)
 
             let size = pill.intrinsicContentSize
-            pill.frame = NSRect(x: xOffset, y: 1, width: size.width, height: size.height)
+            pill.frame = NSRect(x: xOffset, y: 0, width: size.width, height: 22)
             containerView.addSubview(pill)
             pillViews.append(pill)
             xOffset += size.width + 4
@@ -49,7 +49,7 @@ class StatusBarController {
         // "+N" badge if more sessions
         if sessions.count > maxPills {
             let badge = NSTextField(labelWithString: "+\(sessions.count - maxPills)")
-            badge.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+            badge.font = NSFont.menuBarFont(ofSize: 0)
             badge.textColor = .secondaryLabelColor
             badge.sizeToFit()
             badge.frame.origin = NSPoint(x: xOffset, y: 3)
@@ -60,19 +60,19 @@ class StatusBarController {
         // Separator + rate limit
         if !sessions.isEmpty {
             let sep = NSTextField(labelWithString: "·")
-            sep.font = NSFont.systemFont(ofSize: 11)
+            sep.font = NSFont.menuBarFont(ofSize: 0)
             sep.textColor = .tertiaryLabelColor
             sep.sizeToFit()
-            sep.frame.origin = NSPoint(x: xOffset, y: 2)
+            sep.frame.origin = NSPoint(x: xOffset, y: 4)
             containerView.addSubview(sep)
             xOffset += sep.frame.width + 4
         }
 
         let rlLabel = NSTextField(labelWithString: rateLimitText)
-        rlLabel.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
-        rlLabel.textColor = rateLimitColor
+        rlLabel.font = NSFont.menuBarFont(ofSize: 0)
+        rlLabel.textColor = .white
         rlLabel.sizeToFit()
-        rlLabel.frame.origin = NSPoint(x: xOffset, y: 2)
+        rlLabel.frame.origin = NSPoint(x: xOffset, y: 4)
         containerView.addSubview(rlLabel)
         xOffset += rlLabel.frame.width + 4
 

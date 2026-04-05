@@ -1,13 +1,32 @@
 import AppKit
 import SwiftUI
 
+class DropdownPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+
+    init(contentRect: NSRect) {
+        super.init(
+            contentRect: contentRect,
+            styleMask: [.nonactivatingPanel, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        isFloatingPanel = true
+        level = .statusBar
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+    }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusBarController: StatusBarController!
     private var sessionManager: SessionManager!
     private var sessionWatcher: SessionWatcher!
-    private var popover: NSPopover!
+    private var panel: DropdownPanel!
     private var staleTimer: Timer?
     private var rateLimitTimer: Timer?
+    private var eventMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         sessionManager = SessionManager()
@@ -15,16 +34,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusBarController = StatusBarController()
         statusBarController.onClicked = { [weak self] in
-            self?.togglePopover()
+            self?.togglePanel()
         }
 
-        // Set up popover with SwiftUI content
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 280, height: 400)
-        popover.behavior = .transient
-        popover.contentViewController = NSHostingController(
+        // Set up panel with SwiftUI content
+        panel = DropdownPanel(contentRect: NSRect(x: 0, y: 0, width: 290, height: 400))
+        let hostingView = NSHostingView(
             rootView: PopoverContentView(sessionManager: sessionManager)
+                .background(
+                    VisualEffectBackground()
+                )
         )
+        panel.contentView = hostingView
 
         // Watch session-status directory
         let sessionDir = FileManager.default.homeDirectoryForCurrentUser
@@ -90,18 +111,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return (text, color)
     }
 
-    private func togglePopover() {
-        guard let button = statusBarController.button else { return }
-
-        if popover.isShown {
-            popover.performClose(nil)
+    private func togglePanel() {
+        if panel.isVisible {
+            hidePanel()
         } else {
-            // Refresh content size based on session count
-            let sessionHeight = max(sessionManager.sessions.count * 40, 60)
-            let totalHeight = sessionHeight + 160 // rate limits + footer
-            popover.contentSize = NSSize(width: 280, height: min(totalHeight, 500))
+            showPanel()
+        }
+    }
 
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    private func showPanel() {
+        guard let button = statusBarController.button,
+              let buttonWindow = button.window else { return }
+
+        // Get button position in screen coordinates
+        let buttonRect = button.convert(button.bounds, to: nil)
+        let screenRect = buttonWindow.convertToScreen(buttonRect)
+
+        // Resize panel to fit content
+        let sessionHeight = max(sessionManager.sessions.count * 56, 80)
+        let totalHeight = sessionHeight + 200
+        let panelHeight = CGFloat(min(totalHeight, 500))
+        let panelWidth: CGFloat = 290
+
+        // Position: centered under the button, 4pt gap below menu bar
+        let x = screenRect.midX - panelWidth / 2
+        let y = screenRect.minY - panelHeight - 4
+
+        panel.setFrame(NSRect(x: x, y: y, width: panelWidth, height: panelHeight), display: true)
+        panel.makeKeyAndOrderFront(nil)
+
+        // Close when clicking outside
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            self?.hidePanel()
+        }
+    }
+
+    private func hidePanel() {
+        panel.orderOut(nil)
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
         }
     }
 
@@ -109,7 +158,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         sessionWatcher.stop()
         staleTimer?.invalidate()
         rateLimitTimer?.invalidate()
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
+}
+
+// NSVisualEffectView wrapper for SwiftUI
+struct VisualEffectBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .hudWindow
+        view.blendingMode = .behindWindow
+        view.state = .active
+        view.wantsLayer = true
+        view.layer?.cornerRadius = 14
+        view.layer?.masksToBounds = true
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
 let app = NSApplication.shared

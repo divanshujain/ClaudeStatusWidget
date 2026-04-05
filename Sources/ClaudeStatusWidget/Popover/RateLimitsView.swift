@@ -6,25 +6,43 @@ struct RateLimitRow: View {
     let status: RateLimitStatusInfo
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             HStack {
                 Text(label)
-                    .font(.system(size: 12))
-                Spacer()
-                Text("\(Int(percentage))% · \(formattedBurnRate) · resets \(formattedReset)")
-                    .font(.system(size: 11))
-                    .foregroundColor(status.color)
-            }
-
-            ProgressView(value: percentage, total: 100)
-                .progressViewStyle(.linear)
-                .tint(status.color)
-
-            HStack {
+                    .font(.system(size: 12, weight: .medium))
                 Spacer()
                 Text(status.label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(status.color)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(status.color.opacity(0.15))
+                    )
+            }
+
+            // Progress bar with rounded ends
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 5)
+                    Capsule()
+                        .fill(status.color.opacity(0.8))
+                        .frame(width: max(geo.size.width * percentage / 100, 4), height: 5)
+                }
+            }
+            .frame(height: 5)
+
+            HStack {
+                Text("\(Int(percentage))% used")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(formattedBurnRate) · resets \(formattedReset)")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
             }
         }
     }
@@ -47,9 +65,9 @@ struct RateLimitsView: View {
     let rateLimits: RateLimits?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("USAGE LIMITS")
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(.secondary)
                 .tracking(0.5)
 
@@ -79,7 +97,10 @@ struct RateLimitsView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.06))
+        )
     }
 }
