@@ -15,11 +15,10 @@ let package = Package(
                               "-Xlinker", "Sources/ClaudeStatusWidget/Info.plist"])
             ]
         ),
-        // Re-enable once Xcode is installed (XCTest requires Xcode IDE)
-        // .testTarget(
-        //     name: "ClaudeStatusWidgetTests",
-        //     dependencies: ["ClaudeStatusWidget"],
-        //     path: "Tests/ClaudeStatusWidgetTests"
-        // )
+        .testTarget(
+            name: "ClaudeStatusWidgetTests",
+            dependencies: ["ClaudeStatusWidget"],
+            path: "Tests/ClaudeStatusWidgetTests"
+        )
     ]
 )

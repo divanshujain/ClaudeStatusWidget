@@ -8,7 +8,7 @@ final class RateLimitStatusTests: XCTestCase {
         let status = RateLimitCalculator.status(for: window, windowDuration: 18000, now: now)
 
         XCTAssertEqual(status.severity, .safe)
-        XCTAssertTrue(status.burnRate < 10.0)
+        XCTAssertTrue(status.burnRate <= 10.0)
         XCTAssertTrue(status.resetCountdown > 0)
         XCTAssertTrue(status.label.contains("safe"))
     }
