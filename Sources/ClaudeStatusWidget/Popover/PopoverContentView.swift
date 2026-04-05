@@ -3,36 +3,40 @@ import AppKit
 
 extension Color {
     static let tertiaryLabel = Color(nsColor: .tertiaryLabelColor)
-    static let cardBackground = Color(nsColor: NSColor(white: 1.0, alpha: 0.07))
 }
 
 struct PopoverContentView: View {
     @ObservedObject var sessionManager: SessionManager
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
+            // Title
+            HStack {
+                Text("Claude Code Status")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
+            Divider()
+
             // Sessions list
             if sessionManager.sessions.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "terminal")
-                        .font(.system(size: 24))
-                        .foregroundColor(.secondary)
+                VStack(spacing: 6) {
                     Text("No active sessions")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                     Text("Start a Claude Code session to see it here")
                         .font(.system(size: 11))
                         .foregroundColor(.tertiaryLabel)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.cardBackground)
-                )
+                .padding(.vertical, 20)
             } else {
-                VStack(spacing: 4) {
-                    ForEach(sessionManager.sessions, id: \.sessionId) { session in
+                VStack(spacing: 0) {
+                    ForEach(Array(sessionManager.sessions.enumerated()), id: \.element.sessionId) { index, session in
                         SessionRowView(
                             session: session,
                             isStale: sessionManager.isStale(sessionId: session.sessionId),
@@ -41,25 +45,32 @@ struct PopoverContentView: View {
                         .onTapGesture {
                             openInFinder(path: session.folderPath)
                         }
+
+                        if index < sessionManager.sessions.count - 1 {
+                            Divider()
+                        }
                     }
                 }
             }
 
-            // Rate limits card
+            Divider()
+
+            // Rate limits
             RateLimitsView(rateLimits: sessionManager.latestRateLimits)
+
+            Divider()
 
             // Footer
             HStack {
                 Text("Total cost: $\(totalCost, specifier: "%.2f")")
-                    .font(.system(size: 10))
-                    .foregroundColor(.tertiaryLabel)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
                 Spacer()
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .padding(10)
         .frame(width: 290)
-        .background(Color.clear)
     }
 
     private var totalCost: Double {

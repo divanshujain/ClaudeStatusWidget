@@ -4,10 +4,10 @@ import SwiftUI
 class DropdownPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 
-    init(contentRect: NSRect) {
+    init<Content: View>(@ViewBuilder content: () -> Content) {
         super.init(
-            contentRect: contentRect,
-            styleMask: [.nonactivatingPanel, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: 290, height: 400),
+            styleMask: [.borderless, .nonactivatingPanel, .utilityWindow, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -16,6 +16,42 @@ class DropdownPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
+        hidesOnDeactivate = false
+        isReleasedWhenClosed = false
+        titleVisibility = .hidden
+        titlebarAppearsTransparent = true
+        titlebarSeparatorStyle = .none
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        // Hide window buttons
+        standardWindowButton(.closeButton)?.isHidden = true
+        standardWindowButton(.miniaturizeButton)?.isHidden = true
+        standardWindowButton(.zoomButton)?.isHidden = true
+
+        // NSVisualEffectView IS the content view — not a background layer
+        let visualEffect = NSVisualEffectView()
+        visualEffect.material = .popover
+        visualEffect.blendingMode = .behindWindow
+        visualEffect.state = .active
+        visualEffect.wantsLayer = true
+        visualEffect.layer?.cornerRadius = 10
+        visualEffect.layer?.masksToBounds = true
+
+        // Embed SwiftUI inside the visual effect view
+        let hosting = NSHostingView(rootView:
+            content()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.clear)
+        )
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        visualEffect.addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: visualEffect.leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: visualEffect.trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: visualEffect.topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: visualEffect.bottomAnchor),
+        ])
+        contentView = visualEffect
     }
 }
 
@@ -38,14 +74,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Set up panel with SwiftUI content
-        panel = DropdownPanel(contentRect: NSRect(x: 0, y: 0, width: 290, height: 400))
-        let hostingView = NSHostingView(
-            rootView: PopoverContentView(sessionManager: sessionManager)
-                .background(
-                    VisualEffectBackground()
-                )
-        )
-        panel.contentView = hostingView
+        panel = DropdownPanel {
+            PopoverContentView(sessionManager: self.sessionManager)
+        }
 
         // Watch session-status directory
         let sessionDir = FileManager.default.homeDirectoryForCurrentUser
@@ -123,24 +154,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusBarController.button,
               let buttonWindow = button.window else { return }
 
-        // Get button position in screen coordinates
         let buttonRect = button.convert(button.bounds, to: nil)
         let screenRect = buttonWindow.convertToScreen(buttonRect)
 
-        // Resize panel to fit content
-        let sessionHeight = max(sessionManager.sessions.count * 56, 80)
-        let totalHeight = sessionHeight + 200
+        let sessionHeight = max(sessionManager.sessions.count * 60, 80)
+        let totalHeight = sessionHeight + 220
         let panelHeight = CGFloat(min(totalHeight, 500))
         let panelWidth: CGFloat = 290
 
-        // Position: centered under the button, 4pt gap below menu bar
         let x = screenRect.midX - panelWidth / 2
         let y = screenRect.minY - panelHeight - 4
 
         panel.setFrame(NSRect(x: x, y: y, width: panelWidth, height: panelHeight), display: true)
         panel.makeKeyAndOrderFront(nil)
 
-        // Close when clicking outside
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.hidePanel()
         }
@@ -162,22 +189,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSEvent.removeMonitor(monitor)
         }
     }
-}
-
-// NSVisualEffectView wrapper for SwiftUI
-struct VisualEffectBackground: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = .hudWindow
-        view.blendingMode = .behindWindow
-        view.state = .active
-        view.wantsLayer = true
-        view.layer?.cornerRadius = 14
-        view.layer?.masksToBounds = true
-        return view
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
 let app = NSApplication.shared

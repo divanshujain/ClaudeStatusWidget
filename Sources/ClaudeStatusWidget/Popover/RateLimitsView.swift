@@ -9,31 +9,24 @@ struct RateLimitRow: View {
         VStack(spacing: 6) {
             HStack {
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                 Spacer()
                 Text(status.label)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(status.color)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(status.color.opacity(0.15))
-                    )
             }
 
-            // Progress bar with rounded ends
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(height: 5)
+                        .fill(Color.primary.opacity(0.1))
+                        .frame(height: 4)
                     Capsule()
-                        .fill(status.color.opacity(0.8))
-                        .frame(width: max(geo.size.width * percentage / 100, 4), height: 5)
+                        .fill(status.color)
+                        .frame(width: max(geo.size.width * percentage / 100, 4), height: 4)
                 }
             }
-            .frame(height: 5)
+            .frame(height: 4)
 
             HStack {
                 Text("\(Int(percentage))% used")
@@ -65,12 +58,7 @@ struct RateLimitsView: View {
     let rateLimits: RateLimits?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("USAGE LIMITS")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(.secondary)
-                .tracking(0.5)
-
+        VStack(spacing: 0) {
             if let limits = rateLimits {
                 let now = Date().timeIntervalSince1970
                 let fiveHStatus = RateLimitCalculator.status(
@@ -85,22 +73,25 @@ struct RateLimitsView: View {
                     percentage: limits.fiveHour.usedPercentage,
                     status: fiveHStatus
                 )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+
+                Divider()
 
                 RateLimitRow(
                     label: "7-day",
                     percentage: limits.sevenDay.usedPercentage,
                     status: sevenDStatus
                 )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             } else {
                 Text("No usage data yet")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.06))
-        )
     }
 }
