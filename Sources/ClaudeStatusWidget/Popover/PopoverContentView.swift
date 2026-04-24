@@ -60,6 +60,12 @@ struct PopoverContentView: View {
 
             Divider()
 
+            Divider()
+
+            QuotaView(loader: SessionManagerGlobal.shared.rateLimitHistoryLoader)
+
+            Divider()
+
             // Footer
             HStack {
                 Text("Total cost: $\(totalCost, specifier: "%.2f")")
@@ -70,7 +76,7 @@ struct PopoverContentView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
         }
-        .frame(width: 290)
+        .frame(width: 320)
     }
 
     private var totalCost: Double {

@@ -7,6 +7,8 @@ class SessionManagerGlobal: ObservableObject {
     var watcher: SessionWatcher?
     var staleTimer: Timer?
     var rateLimitTimer: Timer?
+    let rateLimitHistoryLoader = RateLimitHistoryLoader()
+    let rateLimitHistoryWriter = RateLimitHistoryWriter()
 
     init() {
         manager.ensureDirectoryExists()
@@ -24,6 +26,9 @@ class SessionManagerGlobal: ObservableObject {
         rateLimitTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.manager.objectWillChange.send()
         }
+
+        rateLimitHistoryWriter.start()
+        rateLimitHistoryLoader.start()
     }
 }
 
