@@ -7,6 +7,7 @@ import Foundation
 class RateLimitHistoryWriter {
     private let statusDir: URL
     private let csvFile: URL
+    private var pollTimer: Timer?
     private var watcher: DispatchSourceFileSystemObject?
     private var fileDescriptor: Int32 = -1
     private let maxRows: Int = 10000
@@ -25,30 +26,40 @@ class RateLimitHistoryWriter {
         if !fm.fileExists(atPath: statusDir.path) {
             try? fm.createDirectory(at: statusDir, withIntermediateDirectories: true)
         }
-        fileDescriptor = open(statusDir.path, O_EVTONLY)
-        guard fileDescriptor >= 0 else { return }
 
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fileDescriptor,
-            eventMask: [.write],
-            queue: .main
-        )
-        source.setEventHandler { [weak self] in
+        // Directory watcher catches new/deleted session files. In-place content
+        // updates (statusline's `cat > file.json`) don't reliably trigger this,
+        // so a 30s Timer is the primary sampling mechanism.
+        fileDescriptor = open(statusDir.path, O_EVTONLY)
+        if fileDescriptor >= 0 {
+            let source = DispatchSource.makeFileSystemObjectSource(
+                fileDescriptor: fileDescriptor,
+                eventMask: [.write, .delete, .rename],
+                queue: .main
+            )
+            source.setEventHandler { [weak self] in
+                self?.scanAndAppend()
+            }
+            source.setCancelHandler { [weak self] in
+                if let fd = self?.fileDescriptor, fd >= 0 {
+                    close(fd)
+                    self?.fileDescriptor = -1
+                }
+            }
+            source.resume()
+            watcher = source
+        }
+
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.scanAndAppend()
         }
-        source.setCancelHandler { [weak self] in
-            if let fd = self?.fileDescriptor, fd >= 0 {
-                close(fd)
-                self?.fileDescriptor = -1
-            }
-        }
-        source.resume()
-        watcher = source
     }
 
     func stop() {
         watcher?.cancel()
         watcher = nil
+        pollTimer?.invalidate()
+        pollTimer = nil
     }
 
     deinit {
@@ -86,9 +97,13 @@ class RateLimitHistoryWriter {
             let fhReset = asDouble(fh["resets_at"])
             let sdReset = asDouble(sd["resets_at"])
 
+            // Tolerance compare: JSON gives values like 28.000000000000004; the
+            // CSV round-trip loses that precision and stores 28.00. Without epsilon,
+            // every 30s tick would append a duplicate row.
+            let eps = 0.005
             if let last = lastPerSession[sid],
-               last.fiveHourPct == fhPct,
-               last.sevenDayPct == sdPct,
+               abs(last.fiveHourPct - fhPct) < eps,
+               abs(last.sevenDayPct - sdPct) < eps,
                last.fiveHourResetsAt == fhReset,
                last.sevenDayResetsAt == sdReset {
                 continue
