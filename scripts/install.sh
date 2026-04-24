@@ -6,28 +6,31 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "=== ClaudeStatusWidget Installer ==="
 
-# 1. Build the app
 echo "Building..."
 cd "$PROJECT_DIR"
 swift build -c release 2>&1
 
-# 2. Create .app bundle
-APP_DIR="$HOME/Applications/ClaudeStatusWidget.app/Contents"
-mkdir -p "$APP_DIR/MacOS" "$APP_DIR/Resources"
-cp .build/release/ClaudeStatusWidget "$APP_DIR/MacOS/"
-cp Sources/ClaudeStatusWidget/Info.plist "$APP_DIR/"
-# Copy SPM resource bundle (icons etc.)
-if [ -d ".build/release/ClaudeStatusWidget_ClaudeStatusWidget.bundle" ]; then
-    cp -r .build/release/ClaudeStatusWidget_ClaudeStatusWidget.bundle "$APP_DIR/Resources/"
+APP="$HOME/Applications/ClaudeStatusWidget.app"
+APP_CONTENTS="$APP/Contents"
+mkdir -p "$APP_CONTENTS/MacOS" "$APP_CONTENTS/Resources"
+cp .build/release/ClaudeStatusWidget "$APP_CONTENTS/MacOS/"
+cp Sources/ClaudeStatusWidget/Info.plist "$APP_CONTENTS/"
+
+BUNDLE_NAME="ClaudeStatusWidget_ClaudeStatusWidget.bundle"
+if [ -d ".build/release/$BUNDLE_NAME" ]; then
+    rm -rf "$APP_CONTENTS/Resources/$BUNDLE_NAME"
+    cp -r ".build/release/$BUNDLE_NAME" "$APP_CONTENTS/Resources/"
 fi
+
+codesign --remove-signature "$APP_CONTENTS/MacOS/ClaudeStatusWidget" >/dev/null 2>&1 || true
+codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+
 echo "Installed app to ~/Applications/ClaudeStatusWidget.app"
 
-# 3. Install statusline script
 cp "$SCRIPT_DIR/statusline-command.sh" "$HOME/.claude/statusline-command.sh"
 chmod +x "$HOME/.claude/statusline-command.sh"
 echo "Updated statusline script at ~/.claude/statusline-command.sh"
 
-# 4. Create session-status directory
 mkdir -p "$HOME/.claude/session-status"
 echo "Created ~/.claude/session-status/"
 

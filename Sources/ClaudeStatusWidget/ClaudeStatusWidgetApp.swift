@@ -33,26 +33,26 @@ class SessionManagerGlobal: ObservableObject {
 }
 
 func loadMenuBarIcon() -> NSImage? {
-    // Try Bundle.module first (SPM resource bundle), then main bundle
-    let bundles = [Bundle.module, Bundle.main]
-    for bundle in bundles {
-        if let url = bundle.url(forResource: "claudecode", withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
-            image.isTemplate = true
-            image.size = NSSize(width: 18, height: 18)
-            return image
-        }
-        // Check inside nested resource bundles
-        if let resourceURL = bundle.resourceURL {
-            let nestedBundles = (try? FileManager.default.contentsOfDirectory(at: resourceURL, includingPropertiesForKeys: nil))?.filter { $0.pathExtension == "bundle" } ?? []
-            for nested in nestedBundles {
-                if let nestedBundle = Bundle(url: nested),
-                   let url = nestedBundle.url(forResource: "claudecode", withExtension: "png"),
-                   let image = NSImage(contentsOf: url) {
-                    image.isTemplate = true
-                    image.size = NSSize(width: 18, height: 18)
-                    return image
-                }
+    // Avoid Bundle.module — SPM's auto-generated accessor hardcodes search
+    // paths (app root + absolute dev build path) that don't resolve for users
+    // who didn't build the .app themselves, and it fatalErrors on miss. We
+    // find the icon via Bundle.main + nested-bundle search, which works for
+    // any properly-assembled .app with resources under Contents/Resources/.
+    if let url = Bundle.main.url(forResource: "claudecode", withExtension: "png"),
+       let image = NSImage(contentsOf: url) {
+        image.isTemplate = true
+        image.size = NSSize(width: 18, height: 18)
+        return image
+    }
+    if let resourceURL = Bundle.main.resourceURL {
+        let nestedBundles = (try? FileManager.default.contentsOfDirectory(at: resourceURL, includingPropertiesForKeys: nil))?.filter { $0.pathExtension == "bundle" } ?? []
+        for nested in nestedBundles {
+            if let nestedBundle = Bundle(url: nested),
+               let url = nestedBundle.url(forResource: "claudecode", withExtension: "png"),
+               let image = NSImage(contentsOf: url) {
+                image.isTemplate = true
+                image.size = NSSize(width: 18, height: 18)
+                return image
             }
         }
     }
