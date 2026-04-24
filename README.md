@@ -10,6 +10,7 @@ A native macOS menu bar widget that displays real-time Claude Code session statu
 
 - Real-time context window usage per session (tokens used / total)
 - 5-hour and 7-day rate limit tracking with burn rate projections
+- **Quota history panel** — past 7 days of 5-hour window utilization as a colored bar chart (green / amber / red) plus horizontal gauges for 5h-over-7d and 7d-over-14d averages with peak markers
 - "Safe" / "danger" indicators for rate limits
 - Multiple concurrent session support
 - Stale session detection (greyed out after 5 min inactivity)
@@ -21,13 +22,36 @@ A native macOS menu bar widget that displays real-time Claude Code session statu
 ## Requirements
 
 - macOS 13+ (Ventura)
-- Swift 5.9+
-- Xcode (for running tests) or Command Line Tools (for building)
+- Apple Silicon (arm64) for the prebuilt binary; Intel Macs must build from source
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
+- For building from source: Swift 5.9+ and Command Line Tools (Xcode only needed for tests)
 
 ## Installation
 
-### 1. Clone and build
+Two paths: the **quick install** uses the prebuilt `.app` in `dist/` (no Swift toolchain required). The **build-from-source** path compiles locally.
+
+### Option A: Quick install (prebuilt)
+
+```bash
+git clone https://github.com/divanshujain/ClaudeStatusWidget.git
+cd ClaudeStatusWidget
+
+# Unzip prebuilt app into Applications
+unzip dist/ClaudeStatusWidget.app.zip -d ~/Applications/
+
+# Install statusline script + create session-status dir
+cp Scripts/statusline-command.sh ~/.claude/statusline-command.sh
+chmod +x ~/.claude/statusline-command.sh
+mkdir -p ~/.claude/session-status
+
+# If you downloaded the zip via a browser, strip the Gatekeeper quarantine flag.
+# (git clone doesn't add it, but zips downloaded from GitHub's web UI do.)
+xattr -dr com.apple.quarantine ~/Applications/ClaudeStatusWidget.app 2>/dev/null || true
+```
+
+Then jump to [Configure Claude Code statusline](#configure-claude-code-statusline) below.
+
+### Option B: Build from source
 
 ```bash
 git clone https://github.com/divanshujain/ClaudeStatusWidget.git
@@ -35,11 +59,11 @@ cd ClaudeStatusWidget
 bash Scripts/install.sh
 ```
 
-This builds the app, installs it to `~/Applications/`, and updates the Claude Code statusline script.
+This compiles a release build, installs it to `~/Applications/`, copies the statusline script, and creates the `session-status` directory.
 
-### 2. Configure Claude Code statusline
+### Configure Claude Code statusline
 
-The install script automatically copies the statusline script to `~/.claude/statusline-command.sh`. You need to tell Claude Code to use it by adding this to your `~/.claude/settings.json`:
+The widget relies on Claude Code writing a JSON file per session on each turn. Tell Claude Code to use the installed statusline by adding this to `~/.claude/settings.json`:
 
 ```json
 {
@@ -50,25 +74,25 @@ The install script automatically copies the statusline script to `~/.claude/stat
 }
 ```
 
-If you already have a `statusLine` entry, replace it with the above.
+If you already have a `statusLine` entry, replace it with the above. Without this, the widget will show "No active sessions" and the Quota panel will stay empty.
 
-### 3. Launch the widget
+### Launch the widget
 
 ```bash
 open ~/Applications/ClaudeStatusWidget.app
 ```
 
+First launch on a prebuilt download from the browser may trigger Gatekeeper's "unidentified developer" warning — right-click the app → **Open** → **Open**, once. The binary is ad-hoc signed (not notarized).
+
 To auto-start on login: **System Settings > General > Login Items > Add ClaudeStatusWidget**.
 
-### 4. Start a Claude Code session
-
-The widget will automatically detect any running Claude Code session and display its status in the menu bar. Start a session in any terminal:
+### Start a Claude Code session
 
 ```bash
 claude
 ```
 
-The menu bar will update in real-time as you interact with Claude.
+The menu bar updates in real-time as you interact with Claude. The Quota panel begins populating after the first 5-hour window completes; until then it displays "Collecting…".
 
 ## How It Works
 
@@ -81,6 +105,8 @@ Claude Code session
 ```
 
 Each session writes its own JSON file containing context usage, rate limits, model, cost, and other metadata. The widget watches the `~/.claude/session-status/` directory and updates the UI whenever a file changes.
+
+The Quota panel has its own pipeline: `RateLimitHistoryWriter` watches the same directory and appends deduplicated rows to `~/.claude/rate-limit-history.csv` every time a session's 5h/7d pct or reset timestamp changes. The file is capped at 10,000 rows (~900 KB) with oldest rows rolled off first — roughly 4 months of history in practice.
 
 ### Timers
 
@@ -109,10 +135,13 @@ Sources/ClaudeStatusWidget/
   Models/
     SessionData.swift            # Codable models for session JSON
     RateLimitStatus.swift        # Burn rate calculator, severity levels
+    RateLimitHistory.swift       # History entry model + CSV parser + aggregator
     SessionColorPalette.swift    # Color assignments per session
   Services/
     SessionManager.swift         # Session lifecycle, staleness, cleanup
     SessionWatcher.swift         # DispatchSource directory watcher
+    RateLimitHistoryLoader.swift # Watches history CSV, publishes aggregated stats
+    RateLimitHistoryWriter.swift # Samples session-status JSONs, appends to CSV (deduped, capped)
   MenuBar/
     StatusBarController.swift    # NSStatusItem pill rendering (unused with MenuBarExtra)
     PillView.swift               # Custom pill view (unused with MenuBarExtra)
@@ -120,10 +149,13 @@ Sources/ClaudeStatusWidget/
     PopoverContentView.swift     # Dropdown container
     SessionRowView.swift         # Session row with progress ring
     RateLimitsView.swift         # Rate limit bars and status
+    QuotaView.swift              # Bar chart (past 7d of 5h windows) + 5h/7d gauges
 Scripts/
   statusline-command.sh          # Claude Code statusline script
   install.sh                     # Build + install automation
   bundle.sh                      # .app bundle creation
+dist/
+  ClaudeStatusWidget.app.zip     # Prebuilt arm64 release (ad-hoc signed)
 ```
 
 ## License
